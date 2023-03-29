@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# Copyright (c) 2020 Jiri Svoboda
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# - Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+# - Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+# - The name of the author may not be used to endorse or promote products
+#   derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# pkg-config-like tool for HelenOS libraries
+# HelenOS Cross Compiler Wrapper (XCW)
+# Facilitate cross-compiling external software to HelenOS
+#
+
+XCW="$(dirname "$0")"
+BUILD_ROOT="$(dirname "$(dirname "$(dirname "$XCW")")")"
+if [ -z "$EXPORT_DIR" ]; then
+	EXPORT_DIR="$BUILD_ROOT/export"
+fi
+
+INCLUDE_DIR="$EXPORT_DIR/include"
+LIB_DIR="$EXPORT_DIR/lib"
+
+libmath_cflags="-I$INCLUDE_DIR/libmath"
+libmath_libs="$LIB_DIR/libmath.a"
+
+libui_cflags="-I$INCLUDE_DIR/libui -I$INCLUDE_DIR/libdisplay -I$INCLUDE_DIR/libgfx -I$INCLUDE_DIR/libipcgfx -I$INCLUDE_DIR/libcongfx"
+libui_libs="$LIB_DIR/libui.a $LIB_DIR/libdisplay.a $LIB_DIR/libipcgfx.a $LIB_DIR/libcongfx.a $LIB_DIR/libgfx.a $LIB_DIR/libgfxfont.a $LIB_DIR/libriff.a $LIB_DIR/libmemgfx.a"
+
+libgfximage_cflags="-I$INCLUDE_DIR/libgfximage"
+libgfximage_libs="$LIB_DIR/libgfximage.a $LIB_DIR/libpixconv.a"
+
+libhound_cflags="-I$INCLUDE_DIR/libhound"
+libhound_libs="$LIB_DIR/libhound.a"
+
+libpcm_cflags="-I$INCLUDE_DIR/libpcm"
+libpcm_libs="$LIB_DIR/libpcm.a"
+
+libgfx_cflags="-I$INCLUDE_DIR/libgfx"
+libgfx_libs="$LIB_DIR/libgfx.a"
+
+libipcgfx_cflags="-I$INCLUDE_DIR/libipcgfx"
+libipcgfx_libs="$LIB_DIR/libipcgfx.a"
+
+libdisplay_cflags="-I$INCLUDE_DIR/libdisplay"
+libdisplay_libs="$LIB_DIR/libdisplay.a"
+
+action=none
+pkg=
+
+while [ ".$1" != . ] ; do
+	case ".$1" in
+	(.--cflags) action=cflags;;
+	(.--libs) action=libs;;
+	(.-*) echo "Uknwown option $1" >&2; exit 1;;
+	(.*)
+	    case "$1" in
+	    (libui) ;;
+	    (libgfximage) ;;
+	    (libmath) ;;
+	    (libhound) ;;
+	    (libpcm) ;;
+	    (libgfx) ;;
+	    (libipcgfx) ;;
+	    (libdisplay) ;;
+	    (*) echo "Unknown package $1" >&2; exit 1;;
+	    esac
+
+	    echo "$pkg" | grep -w "$1" >/dev/null 2>&1
+	    if [ $? -ne 0 ] ; then
+		    pkg="$pkg $1"
+	    fi;;
+	esac
+	shift 1
+done
+
+if [ ."$pkg" = . ]; then
+	echo "Package name(s) required." >&2
+	exit 1
+fi
+
+for p in $pkg ; do
+	case "$action" in
+	(cflags) eval "printf ' %s' \$${p}_cflags";;
+	(libs) eval "printf ' %s' \$${p}_libs";;
+	esac
+done
+
+echo
